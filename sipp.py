@@ -147,86 +147,37 @@ def compare_nodes(n1, n2):
 
 
 def a_star_with_safe_intervals(my_map, start_loc, goal_loc, h_values, agent, constraints):
-    """ my_map      - binary obstacle map
-        start_loc   - start position
-        goal_loc    - goal position
-        agent       - the agent that is being re-planned
-        constraints - constraints defining where robot should or cannot go at each timestep
-    """
-
-    ##############################
-    # Task 1.1: Extend the A* search to search in the space-time domain
-    #           rather than space domain, only.
 
     open_list = []
     closed_list = dict()
+  
     h_value = h_values[start_loc]
-
-    goal_locations = [c for c in constraints if type(c)==tuple]
-    # filter constraints for goal locations
-    constraints = [x for x in constraints if x not in goal_locations]
-
+   
+    #if the goal location is in no way connected to the start node then we must return a no solution
+    if start_loc not in h_values_keys():
+        return None
+        
     constraint_table = build_constraint_table(constraints, agent)
-    positive_constraint_table = build_positive_constraint_table(constraints, agent)
-    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None, 'timestep': 0}
-
-    # calc time limiting constraints
-    if len(constraint_table.keys()) > 0:
-        earliest_goal_time_step = max(constraint_table.keys())
-    else:
-        earliest_goal_time_step = 0
-
-    # add timelimitting (Task 2.4)
-    time_upper_bound = len(my_map)*len(my_map[0]) + earliest_goal_time_step
-
+   
+    root_safe_interval = get_safe_interval() ####yet to make the safe interval fxn
+    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None, 'timestep': 0, 'safe_interval': root_safe_interval, 'wait_time': 0}
     push_node(open_list, root)
-    closed_list[(root['loc'],0)] = root
-    while len(open_list) > 0:
-        curr = pop_node(open_list)
-
-        if curr['timestep'] > time_upper_bound:
-            break
-        #############################
-        # Task 1.4: Adjust the goal test condition to handle goal constraints
-        if curr['loc'] == goal_loc and curr['timestep'] > earliest_goal_time_step:  
-            return get_path(curr)
-            #Add child node 4 for when agent waits
-        for dir in range(5): 
-            child_loc = move(curr['loc'], dir)
-
-            # check if child loc exceeds map boundaries
-            if child_loc[0] < 0 or  child_loc[1] < 0 or  child_loc[0] >= len(my_map) or  child_loc[1] >= len(my_map[0]):
-                continue
-
-            # check if child loc is True (blocked)    
-            if my_map[child_loc[0]][child_loc[1]]:
-                continue
-
-            # check if child loc violates goal constraints
-            if child_loc in goal_locations:
-                continue
-
-            child = {'loc': child_loc,
-                    'g_val': curr['g_val'] + 1,
-                    'h_val': h_values[child_loc],
-                    'parent': curr,
-                    'timestep': curr['timestep'] + 1}
-                    
-            #handle child violation of negative constraints
-            if is_constrained(curr['loc'], child['loc'], child['timestep'], constraint_table):
-                continue
-
-            #handle child violation of positive constraints
-            if not is_constrained_positive(curr['loc'], child['loc'], child['timestep'], positive_constraint_table):
-                continue
-
-            if (child['loc'], child['timestep']) in closed_list:
-                existing_node = closed_list[(child['loc'],child['timestep'])]
-                if compare_nodes(child, existing_node):
-                    closed_list[(child['loc'],child['timestep'])] = child
-                    push_node(open_list, child)
-            else:
-                closed_list[(child['loc'],child['timestep'])] = child
-                push_node(open_list, child)
-
+    closed_list[(root['loc'], root_safe_interval)] = root
+    
+    maximum_time = 0
+    if len(constraint_table.keys()) > 0:
+        maximum_time = max(constraint_table.keys())
+        
+    #####write something to avoid infinite loop
+    curr = pop_node(open_list)
+    if (curr['loc'] == goal_loc and curr['timestep'] >= maximum_time):
+           return get_path(curr)
+           
+     successors = get_successors(curr) ###yet to make the get successor fxn
+    
+    for successor in successors:
+        #expand the closed list and root in a node with f-value less than the current one
+    
+    
+    
     return None  # Failed to find solutions
