@@ -183,7 +183,7 @@ def get_successors(curr_node , my_map, h_value , constraint_table):
                 continue
                 
             t = earliest_arrival(i, curr['timestep'])
-            if t is None:
+            if t is None or t > end_t:
                 continue
 
             successor = {'loc': x, 'g_val': curr['g_val']+t, 'h_val': h_values[x, 'parent': curr, 'timestep': curr['timestep']+t, 'safe_interval': i, 'wait_time': 0}
