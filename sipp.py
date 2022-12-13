@@ -82,7 +82,52 @@ def build_positive_constraint_table(constraints, agent):
             table[constraint["timestep"]].append(constraint)
     return table
 
-
+def get_safeInterval(curr_loc, config, timestep, constraint_table):
+    prev_time = None
+    safeInterval = []
+    set_Ofconstraint = []
+    repeatingConstraint = []
+    
+    for(time, constraints) in constraint_table.items():
+        for constraint in constraints:
+            #checking for edge collision
+            if len(constraint['loc']) != 1:
+                if curr_loc == constraint['timestep'] not in Set_Ofconstraint and config == constraint['loc'][1] and constraint['loc'][0]:
+                    set_Ofconstraint.append(constraint['timestep']-1)
+                    set_Ofconstraint.append(constraint['timestep'])
+            else:
+            #checking for vertex collision
+                if constraint['loc'][0] == config:
+                    if time!= -1:
+                        if constraint['timestep'] not in set_Ofconstraint:
+                            set_Ofconstraint.append(constraint['timestep'])
+                         
+        set_Ofconstraint.sort()
+        set_Ofconstraint += repeatingConstraint
+        
+        # when there are no constraints
+        if len(set_Ofconstraint) == 0
+            return [(timestep, -1)]
+        
+        for i in range(len(set_Ofconstraint)):
+            if i==0 and type(set_Ofcontraint[i-1] == type(1) and set_Ofconstraint[i] > timestep:
+                safeInterval.append((timestep, constraint_set[i]-1))
+                             
+            if i!=0 and type(constraint_set[i-1]) == type(1) and set_Ofconstraint[i-1]+1 != set_Ofconstraint[i]:
+                if set_Ofconstraint[i-1]+1 <= timestep <= set_Ofconstraint[i]-1:
+                             safeInterval.append((timestep, set_Ofconstraint[i]-1))
+                elif timestep < set_Ofconstraint[i]
+                             safeInterval.append((set_Ofconstraint[i-1]+1, set_Ofconstraint[i]-1))
+            
+            if i == len(setOfconstraint)-1 and set_Ofconstraint[i] != prev_time:
+                if timestep > set_Ofconstraint[i]+1:
+                             safeInterval.append((timestep, -1))
+                else:
+                             safeInterval.append((set_Ofconstraint[i]+1, -1))
+            
+    safeInterval.sort(key=lambda x:x[0])
+    return safeInterval
+   
 def get_location(path, time):
     if time < 0:
         return path[0]
@@ -159,7 +204,7 @@ def a_star_with_safe_intervals(my_map, start_loc, goal_loc, h_values, agent, con
         
     constraint_table = build_constraint_table(constraints, agent)
    
-    root_safe_interval = get_safe_interval() ####yet to make the safe interval fxn
+    root_safe_interval = get_safeInterval() ####yet to make the safe interval fxn
     root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None, 'timestep': 0, 'safe_interval': root_safe_interval, 'wait_time': 0}
     push_node(open_list, root)
     closed_list[(root['loc'], root_safe_interval)] = root
