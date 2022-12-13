@@ -146,6 +146,59 @@ def compare_nodes(n1, n2):
     return n1['g_val'] + n1['h_val'] < n2['g_val'] + n2['h_val']
 
 
+def earliest_arrival(safe_int, curr_time):
+    # curr_time is greater than the time of safe_int
+    if safe_int[1] != -1 and curr_time > safe_int[1]:
+        return None
+    # wait
+    wait_time = safe_int[0] - curr_time
+    if wait_time > 1:
+        return wait_time 
+    else:
+        return 1
+
+    
+def get_successors(curr_node , my_map, h_value , constraint_table):
+    successors = []
+    
+    for dir in range(4):
+        x = move(curr_node['loc'], dir)
+        # set boudary constraint 
+        if x[0] < 0 or x[1] < 0 or x[0] >= len(my_map) or x[1] >= len(my_map[0]): 
+            continue
+        # encounter a block
+        if my_map[x[0]][x[1]]:      
+            continue
+            
+        m_time = 1
+        start_t = curr_node['timestep'] + m_time;
+        end_t = cur_node['safe_interval'][1]
+        if curr_node['safe_interval'][1] != -1:
+            end_t = curr_node['safe_interval'][1] + 1
+        
+         x_safe_intervals = get_safe_interval(curr['loc'], x, curr['timestep']+1, constraint_table)
+        
+         for i in x_safe_intervals:
+            if (i[0] > end_t and end_t != -1) or (i[1] < start_t and i[1] != -1):
+                continue
+                
+            t = earliest_arrival(i, curr['timestep'])
+            if t is None:
+                continue
+
+            successor = {'loc': x, 'g_val': curr['g_val']+t, 'h_val': h_values[x, 'parent': curr, 'timestep': curr['timestep']+t, 'safe_interval': i, 'wait_time': 0}
+
+            if t > 1:
+                successor['wait_time'] += t - 1 
+
+            successors.append(successor)
+
+    return successors
+
+
+        
+
+
 def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     """ my_map      - binary obstacle map
         start_loc   - start position
