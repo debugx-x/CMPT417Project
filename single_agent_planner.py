@@ -145,6 +145,63 @@ def compare_nodes(n1, n2):
     """Return true is n1 is better than n2."""
     return n1['g_val'] + n1['h_val'] < n2['g_val'] + n2['h_val']
 
+def get_safeInterval(curr_loc, config, timestep, constraint_table):
+    """
+    This function returns the safe interval for a given vertex
+    ----------
+    curr_loc: current location of the agent
+    config: the vertex that is being checked
+    timestep: the timestep of the vertex
+    constraint_table: the constraint table for the agent
+    """
+
+    
+
+
+    prev_time = None
+    safeInterval = []
+    set_Ofconstraint = []
+    repeatingConstraint = []
+    
+    for(time, constraints) in constraint_table.items():
+        for constraint in constraints:
+            #checking for edge collision
+            if len(constraint['loc']) != 1:
+                if curr_loc == constraint['timestep'] not in set_Ofconstraint and config == constraint['loc'][1] and constraint['loc'][0]:
+                    set_Ofconstraint.append(constraint['timestep']-1)
+                    set_Ofconstraint.append(constraint['timestep'])
+            else:
+            #checking for vertex collision
+                if constraint['loc'][0] == config:
+                    if time!= -1:
+                        if constraint['timestep'] not in set_Ofconstraint:
+                            set_Ofconstraint.append(constraint['timestep'])
+                         
+        set_Ofconstraint.sort()
+        set_Ofconstraint += repeatingConstraint
+        
+        # when there are no constraints
+        if len(set_Ofconstraint) == 0:
+            return [(timestep, -1)]
+        
+        for i in range(len(set_Ofconstraint)):
+            if i==0 and type(set_Ofconstraint[i-1]) == type(1) and set_Ofconstraint[i] > timestep:
+                safeInterval.append((timestep, set_Ofconstraint[i]-1))
+                             
+            if i!=0 and type(set_Ofconstraint[i-1]) == type(1) and set_Ofconstraint[i-1]+1 != set_Ofconstraint[i]:
+                if set_Ofconstraint[i-1]+1 <= timestep <= set_Ofconstraint[i]-1:
+                    safeInterval.append((timestep, set_Ofconstraint[i]-1))
+                elif timestep < set_Ofconstraint[i]:
+                    safeInterval.append((set_Ofconstraint[i-1]+1, set_Ofconstraint[i]-1))
+            
+            if i == len(set_Ofconstraint)-1 and set_Ofconstraint[i] != prev_time:
+                if timestep > set_Ofconstraint[i]+1:
+                    safeInterval.append((timestep, -1))
+                else:
+                    safeInterval.append((set_Ofconstraint[i]+1, -1))
+            
+    safeInterval.sort(key=lambda x:x[0])
+    return safeInterval
 
 def earliest_arrival(safe_int, curr_time):
     # curr_time is greater than the time of safe_int
@@ -157,7 +214,6 @@ def earliest_arrival(safe_int, curr_time):
     else:
         return 1
 
-    
 def get_successors(curr_node , my_map, h_value , constraint_table):
     successors = []
     
@@ -171,32 +227,25 @@ def get_successors(curr_node , my_map, h_value , constraint_table):
             continue
             
         m_time = 1
-        start_t = curr_node['timestep'] + m_time;
-        end_t = cur_node['safe_interval'][1]
+        start_t = curr_node['timestep'] + m_time
+        end_t = curr_node['safe_interval'][1]
         if curr_node['safe_interval'][1] != -1:
             end_t = curr_node['safe_interval'][1] + 1
-        
-         x_safe_intervals = get_safe_interval(curr['loc'], x, curr['timestep']+1, constraint_table)
-        
-         for i in x_safe_intervals:
+        x_safe_intervals = get_safeInterval(curr_node['loc'], x, curr_node['timestep']+1, constraint_table)
+        for i in x_safe_intervals:
             if (i[0] > end_t and end_t != -1) or (i[1] < start_t and i[1] != -1):
                 continue
-                
-            t = earliest_arrival(i, curr['timestep'])
+
+            t = earliest_arrival(i, curr_node['timestep'])
             if t is None or t > end_t:
                 continue
 
-            successor = {'loc': x, 'g_val': curr['g_val']+t, 'h_val': h_values[x, 'parent': curr, 'timestep': curr['timestep']+t, 'safe_interval': i, 'wait_time': 0}
-
+            successor = {'loc': x, 'g_val': curr_node['g_val']+t, 'h_val': h_value[x], 'parent': curr_node, 'timestep': curr_node['timestep']+t, 'safe_interval': i, 'wait_time': 0}
             if t > 1:
                 successor['wait_time'] += t - 1 
-
             successors.append(successor)
 
     return successors
-
-
-        
 
 
 def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
