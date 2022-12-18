@@ -1,4 +1,3 @@
-from secrets import choice
 import time as timer
 import heapq
 import random
@@ -73,12 +72,12 @@ def standard_splitting(collision):
     # create the two constraints
     if len(loc) == 1:
         # vertex collision
-        constraint1 = {'agent': a1, 'loc': loc, 'timestep': t}
-        constraint2 = {'agent': a2, 'loc': loc, 'timestep': t}        
+        constraint1 = {'agent': a1, 'loc': loc, 'timestep': t, 'positive': False}
+        constraint2 = {'agent': a2, 'loc': loc, 'timestep': t, 'positive': False}        
     else:
         # edge collision
-        constraint1 = {'agent': a1, 'loc': [loc[1],loc[0]], 'timestep': t}
-        constraint2 = {'agent': a2, 'loc': loc, 'timestep': t}
+        constraint1 = {'agent': a1, 'loc': [loc[1],loc[0]], 'timestep': t, 'positive': False}
+        constraint2 = {'agent': a2, 'loc': loc, 'timestep': t, 'positive': False}
         
     # return the two constraints
     return [constraint1, constraint2]
@@ -138,6 +137,15 @@ def paths_violate_constraint(constraint, paths):
                 rst.append(i)
     return rst
 
+def getUniquePath(path):
+# function to remove all duplicate tuples from a list
+    uniquePath = []
+    for i in path:
+        if i not in uniquePath:
+            uniquePath.append(i)
+    return uniquePath
+
+
 class CBSSolver(object):
     """The high-level search of CBS."""
 
@@ -191,6 +199,7 @@ class CBSSolver(object):
                 'constraints': [],
                 'paths': [],
                 'collisions': []}
+                
         for i in range(self.num_of_agents):  # Find initial path for each agent
             path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i], i, root['constraints'])
             if path is None:
@@ -207,15 +216,6 @@ class CBSSolver(object):
         # Task 3.2: Testing
         #for collision in root['collisions']:
             #print(standard_splitting(collision))
-
-        ##############################
-        # Task 3.3: High-Level Search
-        #           Repeat the following as long as the open list is not empty:
-        #             1. Get the next node from the open list (you can use self.pop_node()
-        #             2. If this node has no collision, return solution
-        #             3. Otherwise, choose the first collision and convert to a list of constraints (using your
-        #                standard_splitting function). Add a new child node to your open list for each constraint
-        #           Ensure to create a copy of any objects that your child nodes might inherit
 
         # repeat until the open list is empty
         while len(self.open_list) > 0:
@@ -235,8 +235,8 @@ class CBSSolver(object):
                 constraints = standard_splitting(collision)
 
             # add a new child node to the open list for each constraint
-            for constraint in constraints:                
-                is_path_valid = True                                  
+            for constraint in constraints:
+
                 # create a copy of the node
                 child = {'cost': 0,
                         'constraints': [],
@@ -247,33 +247,53 @@ class CBSSolver(object):
                 child['constraints'] = node['constraints'].copy() + [constraint]   
                 # update the paths
                 child['paths'] = node['paths'].copy()
-                #generate new paths for the agents that violate the constraint
-                path = a_star(self.my_map, self.starts[constraint['agent']], self.goals[constraint['agent']], self.heuristics[constraint['agent']], constraint['agent'], child['constraints'])
-                if path is not None:
-                    # update the paths      
-                    child['paths'][constraint['agent']] = path
-                    # check if disjoint                 
-                    if disjoint:
-                        if constraint['positive']:
-                            # check if the new path violates any of the constraints
-                            agents = paths_violate_constraint(constraint, child['paths'])
 
-                            for agent in agents:
-                                child['constraints'].append({'positive': False, 'agent':agent, 'loc':constraint['loc'], 'timestep':constraint['timestep']})                      
-                                new_path = a_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, child['constraints'])
-                                if new_path is not None:
-                                    child['paths'][agent] = new_path
-                                else:
-                                    is_path_valid = False                                    
-                                    break
+                # check if the constraint is positive
+                if not constraint['positive']:
 
-                    if is_path_valid:
+                    path = a_star(self.my_map, self.starts[constraint['agent']], self.goals[constraint['agent']], self.heuristics[constraint['agent']], constraint['agent'], child['constraints'])
+                    # path = getUniquePath(path)
+                    if path is not None:
+                        child['paths'][constraint['agent']] = path
                         # update the cost
                         child['cost'] = get_sum_of_cost(child['paths'])
                         # update the collisions
                         child['collisions'] = detect_collisions(child['paths'])
-                        # add the child node to the open list
+                        # add the child to the open list
                         self.push_node(child)
+                
+                else:
+                    
+                    # check if the constraint is violated
+                    constraintedAgents = paths_violate_constraint(constraint, node['paths'])
+                    if constraintedAgents is not None:
+                        for agent in constraintedAgents:
+                            path = a_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, child['constraints'])
+                            # path = getUniquePath(path)
+
+                            if path is not None:
+                                child['paths'][agent] = path
+                            else:
+                                pushChild = False
+                                break
+
+                        path = a_star(self.my_map, self.starts[constraint['agent']], self.goals[constraint['agent']], self.heuristics[constraint['agent']], constraint['agent'], child['constraints'])
+                        # path = getUniquePath(path)
+
+                        if path is not None:
+                            child['paths'][constraint['agent']] = path
+                            # update the cost
+                            child['cost'] = get_sum_of_cost(child['paths'])
+                            # update the collisions
+                            child['collisions'] = detect_collisions(child['paths'])
+                            # add the child to the open list
+                            self.push_node(child)
+
+                        else:
+                            pushChild = False
+                        
+                        if pushChild is not False:
+                            self.push_node(child)
 
         # if the open list is empty              
         raise BaseException('No solutions')

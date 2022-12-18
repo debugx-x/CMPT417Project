@@ -315,7 +315,8 @@ def get_successors(curr_node, my_map, h_value, constraint_table):
 
 
 def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
-    """my_map      - binary obstacle map
+    """
+    my_map      - binary obstacle map
     start_loc   - start position
     goal_loc    - goal position
     agent       - the agent that is being re-planned
@@ -325,12 +326,12 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     open_list = []
     closed_list = dict()
 
+    #if the goal location is in no way connected to the start node then we must return a no solution
+    if start_loc not in h_values.keys():
+        return None
+
     # get the heuristic value of the start loc
     h_value = h_values[start_loc]
-
-    #if the goal location is in no way connected to the start node then we must return a no solution
-    if start_loc not in h_value.keys():
-        return None
 
     # build the constraint table
     constraint_table = build_constraint_table(constraints, agent)
