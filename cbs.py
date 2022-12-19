@@ -263,7 +263,7 @@ class CBSSolver(object):
                         self.push_node(child)
                 
                 else:
-                    
+                    pushChild = True
                     # check if the constraint is violated
                     constraintedAgents = paths_violate_constraint(constraint, node['paths'])
                     if constraintedAgents is not None:

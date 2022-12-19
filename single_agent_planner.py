@@ -110,29 +110,6 @@ def build_constraint_table(constraints, agent):
             table[time_step].append(constraint)
     return table
 
-
-def is_constrained(curr_loc, next_loc, next_time, constraint_table):
-    """
-    This function checks if the next location is constrained
-    ----------
-    curr_loc: current location of the agent
-    next_loc: next location of the agent
-    next_time: next time step of the agent
-    constraint_table: the constraint table for the agent
-    """
-    # check if the next time step is in the constraint table
-    if next_time in constraint_table:
-        # check if the next location is in the constraint table
-        for constraint in constraint_table[next_time]:
-            # check if the next location is in the constraint
-            if [next_loc] == constraint["loc"]:
-                return True
-            # check if the current location and next location are in the constraint
-            elif [curr_loc, next_loc] == constraint["loc"]:
-                return True
-    return False
-
-
 def push_node(open_list, node):
     heapq.heappush(open_list, (node['g_val'] + node['h_val'], node['h_val'], node['loc'], node['safe_interval'], node))
 
@@ -166,7 +143,7 @@ def getSafeInterval(curr_loc, config, timestep, constraint_table):
             # checking for edge collision
             if len(constraint["loc"]) != 1:
                 # checking for edge collision
-                if(curr_loc == constraint["timestep"] not in setOfConstraint and config == constraint["loc"][1] and constraint["loc"][0]):
+                if(curr_loc == constraint["loc"][0] and constraint['timestep'] not in setOfConstraint and config == constraint["loc"][1]):
                     setOfConstraint.append(constraint["timestep"] - 1)
                     setOfConstraint.append(constraint["timestep"])
             else:
@@ -178,56 +155,41 @@ def getSafeInterval(curr_loc, config, timestep, constraint_table):
                     else:
                         if constraint["timestep"] not in repeatingConstraint:
                             repeatingConstraint.append(constraint["timestep"])
+                            prev_time = constraint["timestep"][1]
 
-        # sorting the set of constraints
-        setOfConstraint.sort()
-        repeatingConstraint.sort()
-        setOfConstraint += repeatingConstraint
+    # sorting the set of constraints
+    setOfConstraint.sort()
+    repeatingConstraint.sort()
+    setOfConstraint += repeatingConstraint
 
-        # checking for repeating constraints
-        for i in range(len(setOfConstraint)):
-            if i != 0 and setOfConstraint[i] == setOfConstraint[i - 1]:
-                setOfConstraint.remove(setOfConstraint[i])
+    # when there are no constraints
+    if len(setOfConstraint) == 0:
+        return [(timestep, -1)]
 
-        # when there are no constraints
-        if len(setOfConstraint) == 0:
-            return [(timestep, -1)]
+    # checking for safe interval
+    for i in range(len(setOfConstraint)):
+        # first meet point not no start loc, and time not past the first constraint
+        if i == 0 and isinstance(setOfConstraint[i], int) and timestep < setOfConstraint[i] and setOfConstraint[i] != 0:
+            safeInterval.append((timestep, setOfConstraint[i] - 1))
 
-        # checking for safe interval
-        for i in range(len(setOfConstraint)):
-            # first meet point not no start loc, and time not past the first constraint
-            if i == 0 and isinstance(setOfConstraint[i], int):
-                if timestep < setOfConstraint[i]:
-                    safeInterval.append((timestep, setOfConstraint[i] - 1))
-                elif timestep > setOfConstraint[i] + 1:
-                    safeInterval.append((timestep, -1))
-                else:
-                    safeInterval.append((setOfConstraint[i] + 1, -1))
+        # not the first meet point and obstacle not stay in meet point for more than 1 timestep
+        if (i != 0 and isinstance(setOfConstraint[i - 1], int) and setOfConstraint[i - 1] + 1 != setOfConstraint[i]):
+            if setOfConstraint[i - 1] + 1 <= timestep <= setOfConstraint[i] - 1:
+                safeInterval.append((timestep, setOfConstraint[i] - 1))
+            elif timestep < setOfConstraint[i]:
+                safeInterval.append((setOfConstraint[i - 1] + 1, setOfConstraint[i] - 1))
 
-            # not the first meet point and obstacle not stay in meet point for more than 1 timestep
-            if (i != 0 and isinstance(setOfConstraint[i - 1], int) and setOfConstraint[i - 1] + 1 != setOfConstraint[i]):
-                if setOfConstraint[i - 1] + 1 <= timestep <= setOfConstraint[i] - 1:
-                    safeInterval.append((timestep, setOfConstraint[i] - 1))
-                elif timestep < setOfConstraint[i]:
-                    safeInterval.append((setOfConstraint[i - 1] + 1, setOfConstraint[i] - 1))
-                elif timestep > setOfConstraint[i] + 1:
-                    safeInterval.append((timestep, -1))
-                else:
-                    safeInterval.append((setOfConstraint[i] + 1, -1))
+        # not the first meet point and obstacle stay in meet point for more than 1 timestep and not the last meet point
+        # and time not past the next meet point        
+        if i == len(setOfConstraint) - 1 and setOfConstraint[i] != prev_time:
+            if timestep > setOfConstraint[i] + 1:
+                safeInterval.append((timestep, -1))
+            else:
+                safeInterval.append((setOfConstraint[i] + 1, -1))
 
-            # not the first meet point and obstacle stay in meet point for more than 1 timestep and not the last meet point
-            # and time not past the next meet point        
-            if i == len(setOfConstraint) - 1 and setOfConstraint[i] != prev_time:
-                if timestep > setOfConstraint[i] + 1:
-                    safeInterval.append((timestep, -1))
-                else:
-                    safeInterval.append((setOfConstraint[i] + 1, -1))
-
-            prev_time = setOfConstraint[i]
-
+    # sorting the safe interval
     safeInterval.sort(key=lambda x: x[0])
     return safeInterval
-
 
 def earliest_arrival(safe_int, curr_time):
     """
@@ -239,20 +201,23 @@ def earliest_arrival(safe_int, curr_time):
     # curr_time is greater than the time of safe_int or safe_int is not valid
     if safe_int[1] != -1 and curr_time > safe_int[1]:
         return None
-    # wait until the safe interval
+    # curr_time is less than the time of safe_int
     if safe_int[0] > curr_time:
-        return safe_int[0] - curr_time
+    # wait until the safe interval
+        wait = safe_int[0] - curr_time
+        if wait > 0:
+            return wait
     # wait for 1 timestep
     return 1
 
 
-def get_successors(curr_node, my_map, h_value, constraint_table):
+def get_successors(curr_node, my_map, h_values, constraint_table):
     """
     This function returns the successors of a given vertex
     ----------
     curr_node: the vertex that is being checked
     my_map: the map of the environment
-    h_value: the heuristic value of the vertex
+    h_values: the heuristic values for the agent
     constraint_table: the constraint table for the agent
     """
     successors = []
@@ -269,7 +234,7 @@ def get_successors(curr_node, my_map, h_value, constraint_table):
             continue
 
         # check for collision
-        m_time = 1 if dir == curr_node["dir"] else 2 # moving time for the agent to move to the next loc
+        m_time = 1 # moving time for the agent to move to the next loc
         
         start_t = curr_node["timestep"] + m_time
         end_t = curr_node["safe_interval"][1]
@@ -291,14 +256,14 @@ def get_successors(curr_node, my_map, h_value, constraint_table):
             t = earliest_arrival(i, curr_node["timestep"])
 
             # check if the earliest arrival time is valid
-            if t is None or t > end_t:
+            if t is None :
                 continue
 
             # create the successor
             successor = {
                 "loc": x,
                 "g_val": curr_node["g_val"] + t,
-                "h_val": h_value[x],
+                "h_val": h_values[x],
                 "parent": curr_node,
                 "timestep": curr_node["timestep"] + t,
                 "safe_interval": i,
@@ -312,6 +277,14 @@ def get_successors(curr_node, my_map, h_value, constraint_table):
             # add the successor to the list
             successors.append(successor)
     return successors
+
+def timeLimit(my_map):
+    """
+    This function returns the time limit for the agent
+    ----------
+    my_map: the map of the environment
+    """
+    return (len(my_map) * len(my_map[0])) ** 2
 
 
 def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
@@ -357,7 +330,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
         earliest_goal_time_step = 0
 
     # add timelimitting (Task 2.4)
-    time_upper_bound = len(my_map) * len(my_map[0]) + earliest_goal_time_step
+    time_upper_bound = timeLimit(my_map) + earliest_goal_time_step
 
     # add root to open list
     push_node(open_list, root)
@@ -379,20 +352,15 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
 
         for succ in successors:
             # check if the successor is in the closed list
-            if (succ["loc"], succ["safe_interval"]) in closed_list.keys():
+            if (succ["loc"], succ["safe_interval"]) in closed_list:
+                existing_node = closed_list[(succ['loc'], succ['safe_interval'])]
                 # check if the successor is better than the existing node
-                if closed_list[(succ["loc"], succ["safe_interval"])]["g_val"] <= succ["g_val"]:
-                    continue
-                # check if the successor is in the open list
-                if (succ['loc'], succ['safe_interval']) in closed_list:
-                    existing_node = closed_list[(succ['loc'], succ['safe_interval'])]
-                    # check if the successor is better than the existing node
-                    if compare_nodes(succ, existing_node):
-                        closed_list[(succ['loc'], succ['safe_interval'])] = succ
-                        push_node(open_list, succ)
-                else:
+                if compare_nodes(succ, existing_node):
                     closed_list[(succ['loc'], succ['safe_interval'])] = succ
                     push_node(open_list, succ)
+            else:
+                closed_list[(succ['loc'], succ['safe_interval'])] = succ
+                push_node(open_list, succ)
 
         time_upper_bound -= 1
 
