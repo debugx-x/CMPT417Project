@@ -137,15 +137,6 @@ def paths_violate_constraint(constraint, paths):
                 rst.append(i)
     return rst
 
-def getUniquePath(path):
-# function to remove all duplicate tuples from a list
-    uniquePath = []
-    for i in path:
-        if i not in uniquePath:
-            uniquePath.append(i)
-    return uniquePath
-
-
 class CBSSolver(object):
     """The high-level search of CBS."""
 
@@ -225,6 +216,7 @@ class CBSSolver(object):
             if len(node['collisions']) == 0:
                 # return solution
                 self.print_results(node)
+                self.CPU_time = timer.time() - self.start_time
                 return node['paths']
             # otherwise, choose the first collision
             collision = node['collisions'][0]
@@ -248,11 +240,10 @@ class CBSSolver(object):
                 # update the paths
                 child['paths'] = node['paths'].copy()
 
-                # check if the constraint is positive
-                if not constraint['positive']:
+                # check if the constraint is not positive
+                if constraint['positive'] is False:
 
                     path = a_star(self.my_map, self.starts[constraint['agent']], self.goals[constraint['agent']], self.heuristics[constraint['agent']], constraint['agent'], child['constraints'])
-                    # path = getUniquePath(path)
                     if path is not None:
                         child['paths'][constraint['agent']] = path
                         # update the cost
@@ -269,7 +260,6 @@ class CBSSolver(object):
                     if constraintedAgents is not None:
                         for agent in constraintedAgents:
                             path = a_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, child['constraints'])
-                            # path = getUniquePath(path)
 
                             if path is not None:
                                 child['paths'][agent] = path
@@ -278,7 +268,6 @@ class CBSSolver(object):
                                 break
 
                         path = a_star(self.my_map, self.starts[constraint['agent']], self.goals[constraint['agent']], self.heuristics[constraint['agent']], constraint['agent'], child['constraints'])
-                        # path = getUniquePath(path)
 
                         if path is not None:
                             child['paths'][constraint['agent']] = path

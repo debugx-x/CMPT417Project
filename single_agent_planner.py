@@ -1,7 +1,7 @@
 import heapq
 
 def move(loc, dir):
-    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)] # N, E, S, W, wait
     return loc[0] + directions[dir][0], loc[1] + directions[dir][1]
 
 
@@ -234,7 +234,7 @@ def get_successors(curr_node, my_map, h_values, constraint_table):
             continue
 
         # check for collision
-        m_time = 1 # moving time for the agent to move to the next loc
+        m_time = 1 if x == curr_node["loc"] else 2 # moving time for the agent to move to the next loc
         
         start_t = curr_node["timestep"] + m_time
         end_t = curr_node["safe_interval"][1]
@@ -284,7 +284,7 @@ def timeLimit(my_map):
     ----------
     my_map: the map of the environment
     """
-    return (len(my_map) * len(my_map[0])) ** 2
+    return (len(my_map) * len(my_map[0])) * 2
 
 
 def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):

@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "run_experiments.py",
             "console": "integratedTerminal",
-            "args": ["--instance", "test.txt", "--solver", "CBS", "--disjoint"],
+            "args": ["--instance", "instances/test_*", "--solver", "CBS", "--disjoint", "--batch"],
             "justMyCode": true
         }
     ]

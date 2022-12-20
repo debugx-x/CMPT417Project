@@ -93,11 +93,13 @@ if __name__ == '__main__':
             print("***Run CBS***")
             cbs = CBSSolver(my_map, starts, goals)
             paths = cbs.find_solution(args.disjoint)
+            numAgents = cbs.num_of_agents
+            cpuTime = cbs.CPU_time
         else:
             raise RuntimeError("Unknown solver!")
 
         cost = get_sum_of_cost(paths)
-        result_file.write("{},{}\n".format(file, cost))
+        result_file.write("{}, {}, {}, {:.4f}\n".format(file, numAgents, cost, cpuTime))
 
 
         if not args.batch:
